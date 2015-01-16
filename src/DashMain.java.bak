@@ -1,0 +1,339 @@
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.Random;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+
+class Global {
+	
+	public static final int WINDOW_WIDTH = 260;
+	public static final int WINDOW_HEIGHT = 460;
+	
+	public static boolean gameover = false;
+	public static boolean keyPressed = false;
+	
+	public static final int Y_INIT = WINDOW_HEIGHT-70;
+	public static int yPos = WINDOW_HEIGHT-70;
+	public static boolean jump = false;
+	public static boolean DoorsMayMove = false;
+	
+	public static int[] RightDoorX = {WINDOW_WIDTH/2,WINDOW_WIDTH/2,WINDOW_WIDTH/2};
+	public static int[] LeftDoorX = {0,0,0};
+	public static int RightDoorY = 0;
+	public static int LeftDoorY = 0;
+	public static int doorIndex = 0;
+	public static int absolutePath = 0;
+	
+}
+
+class Window extends JFrame {
+
+	private static final long serialVersionUID = 1L;
+	
+	JFrame window = new JFrame("DashUp!");
+	PaintPanel ppanel = new PaintPanel();
+	
+	public Window() {
+		
+		window.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		window.setSize(Global.WINDOW_WIDTH, Global.WINDOW_HEIGHT);
+		window.setVisible(true);
+		
+		window.add(ppanel);
+		
+		Runner thread = new Runner();
+		thread.start();
+		
+		new OpenDoors(0,200);
+		new OpenDoors(1,150);
+		new OpenDoors(2,130);
+		
+		
+		window.addKeyListener(new Listen());
+		
+	}
+	
+}
+
+class Listen extends KeyAdapter {
+
+	public void keyPressed(KeyEvent e) {
+		if(Global.keyPressed)
+			return;
+		int code = e.getKeyCode();
+		
+		if(code == KeyEvent.VK_ENTER || code == KeyEvent.VK_SPACE) {
+			//System.out.println("ENTER");
+			Global.jump = true;
+			Global.keyPressed = true;
+		}
+		
+	}
+}
+
+class Jump extends Thread {
+	int jumpdistanse = 100;
+	int i =0 ;
+	public void run() {
+		if(Global.yPos > 230) {
+			while(i < jumpdistanse && Global.yPos > 230) {
+				Global.yPos--;
+				Global.absolutePath++;
+				i++;
+				pause(20);
+			}
+			//Global.jump = false;
+		} 
+		if(Global.yPos > 200 && Global.yPos <= 230) {
+			while(i < jumpdistanse) {
+				Global.LeftDoorY++;
+				Global.RightDoorY++;
+				Global.absolutePath++;
+				i++;
+				pause(20);
+				//System.out.println("down");
+			}
+		}
+		Global.jump = false;
+		//System.out.println("jump " + Global.jump);
+	}
+	
+	public void pause(int time) {
+		try {
+			currentThread();
+			Thread.sleep(time);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+}
+
+class Fall extends Thread {
+	int falldistanse = 100;
+	int i =0 ;
+	public void run() {
+		while(!Global.jump) {
+			Global.yPos++;
+			Global.absolutePath--;
+			i++;
+			pause(20);
+			//System.out.println("down");
+		}
+	}
+	
+	public void pause(int time) {
+		try {
+			currentThread();
+			Thread.sleep(time);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+}
+
+class DoorsDown extends Thread {
+	int doorsDownDistanse = 100;
+	int i =0 ;
+	public void run() {
+		while(Global.jump && i<doorsDownDistanse) {
+			Global.LeftDoorY++;
+			Global.RightDoorY++;
+			i++;
+			pause(20);
+			//System.out.println("down");
+		}
+	}
+	
+	public void pause(int time) {
+		try {
+			currentThread();
+			Thread.sleep(time);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+}
+
+
+class Runner extends Thread {
+	
+	public void run() {
+		while(!Global.gameover) {
+			jumpAndFall();
+			//openDoors();
+			//closeDoors();
+			pause(100);
+		}
+	}
+	
+	
+	public void jumpAndFall() {
+		
+		if(Global.keyPressed) {
+			
+			Jump jump = new Jump();
+			jump.start();
+			
+		}
+		Global.keyPressed = false;
+		
+		
+		if(Global.yPos < Global.Y_INIT) {
+			
+			Fall fall = new Fall();
+			fall.start();
+			
+		} 
+		if(Global.yPos >= 392) {
+			
+			System.out.println("break");
+			Global.gameover = true;
+			
+		}
+		
+	}
+	
+	public void pause(int time) {
+		try {
+			currentThread();
+			Thread.sleep(time);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+}
+
+
+class OpenDoors implements Runnable{
+	
+	private int type;
+	private int slptime;
+	private boolean open = true;
+	public Thread t;
+	
+	public OpenDoors(int type, int slptime) {
+		
+		this.type = type;
+		this.slptime = slptime;
+		
+		t = new Thread(this);
+		t.start();
+	}
+	
+	public void run() {
+		while(!Global.gameover) {
+			if(open) {
+				 while(Global.LeftDoorX[type] != -100) {
+					Global.LeftDoorX[type] -= 10;
+						pause(slptime);
+				}
+				open = false;
+			}
+			if(!open) {
+				while(Global.LeftDoorX[type] != 0 && !open) {
+					Global.LeftDoorX[type] += 10;
+						pause(slptime);
+				}
+				open = true;
+			}
+		}
+	}
+	public void pause(int time) {
+		try {
+			
+			Thread.sleep(time);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+class Doors {
+	private int ydoor;
+	private int doorstype;
+	
+	public Doors(int ydoor, int doorstype) {
+		this.ydoor = ydoor;
+		this.doorstype = doorstype;
+	}
+	public void renderDoors(Graphics g) {
+		if(doorstype == 0) {
+			g.setColor(Color.black);
+			g.fillRect(Global.LeftDoorX[0], Global.LeftDoorY - ydoor, Global.WINDOW_WIDTH/2, 30);
+			//g.fillRect(Global.RightDoorX[0], Global.RightDoorY - ydoor, Global.WINDOW_WIDTH/2 -5, 30);
+		}
+		if(doorstype == 1) {
+			g.setColor(Color.cyan);
+			g.fillRect(Global.LeftDoorX[1], Global.LeftDoorY - ydoor, Global.WINDOW_WIDTH/2, 30);
+			//g.fillRect(Global.RightDoorX[1], Global.RightDoorY - ydoor, Global.WINDOW_WIDTH/2 -5, 30);
+		}
+		if(doorstype == 2) {
+			g.setColor(Color.blue);
+			g.fillRect(Global.LeftDoorX[2], Global.LeftDoorY - ydoor, Global.WINDOW_WIDTH/2, 30);
+			//g.fillRect(Global.RightDoorX[2], Global.RightDoorY - ydoor, Global.WINDOW_WIDTH/2 -5, 30);
+		}
+	}
+}
+
+
+class PaintPanel extends JPanel {
+	
+	private static final long serialVersionUID = 1L;
+	private ArrayList<Doors> doors = new ArrayList<Doors>();
+	private Graphics dbg;
+	private Image dbImage;
+	
+	Random rend = new Random();
+	
+	
+	
+	public void renderBall(Graphics g) {
+		g.drawOval((Global.WINDOW_WIDTH/2 - 15), Global.yPos, 30, 30);
+	}
+	
+	public void renderDoors(Graphics g) {
+		if(Global.absolutePath >= 150) {
+			int doorstype = rend.nextInt(3);
+			doors.add(new Doors(Global.RightDoorY, doorstype));
+			Global.absolutePath = 0;
+			//System.out.println(Global.yPos);
+			
+		}
+		for(int i = 0; i < doors.size(); i++) {
+			doors.get(i).renderDoors(g);
+		}
+		
+	}
+	
+	public void paint(Graphics g) {
+		
+		dbImage = createImage(getWidth(), getHeight());
+		dbg = dbImage.getGraphics();
+		
+		renderBall(dbg);
+		//renderLeftDors(dbg);
+		//renderRightDors(dbg);
+		renderDoors(dbg);
+		
+		g.drawImage(dbImage, 0, 0, null);
+		
+		repaint();
+		
+	}
+}
+
+public class DashMain {
+	public static void main(String[] args) {
+		new Window();
+	}
+}
